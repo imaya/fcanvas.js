@@ -17,6 +17,12 @@ Fcanvas = function() {
 };
 
 /**
+ * @type {string}
+ * @const
+ */
+Fcanvas.SVGNameSpace = 'http://www.w3.org/2000/svg';
+
+/**
  * メソッドテーブル
  * @type {!Object.<string, number>}
  */
@@ -267,6 +273,149 @@ Fcanvas.prototype.createDrawFunction = function() {
   this.drawFunction = new Function("ctx", funcstr);
 
   return this.drawFunction;
+};
+
+/**
+ * SVG Path の生成.
+ * @return {Element}
+ */
+Fcanvas.prototype.createSVGPath = function() {
+  /** @type {Element} */
+  var path = document.createElementNS(Fcanvas.SVGNameSpace, 'path');
+  /** @type {Array.<number>} */
+  var sequence = this.sequence;
+  /** @type {number} */
+  var id;
+  /** @type {number} */
+  var length;
+  /** @type {Array.<number>} */
+  var args;
+  /** @type {Array} */
+  var d = [];
+  /** @type {number} */
+  var i;
+  /** @type {number} */
+  var il;
+
+  for (i = 0, il = this.pos; i < il;) {
+    id = sequence[i++];
+    length = sequence[i++];
+    args = sequence.slice(i, i += length);
+
+    // method call
+    if (id < 0x80) {
+      switch (Fcanvas.ReverseMethodTable[id]) {
+        // state 0x00-0x0f
+        //case 'save':
+        // TODO: stack pointer の上下と、stack pointer の指す描画状態を元に新しいパスの作成
+        //  break;
+        //case 'restore':
+        //  break;
+        // path 0x10-0x1f
+        //case 'beginPath':
+        //  break;
+        //case 'closePath':
+        //  break;
+        // line 0x20-0x2f
+        case 'lineTo':
+          d.push('L', args.join(' '));
+          break;
+        case 'bezierCurveTo':
+          d.push('C', args.join(' '));
+          break;
+        case 'arc':
+          d.push.apply(d, this.calcCanvasArcToSVGPath.apply(this, args.concat(d.length === 0)));
+          break;
+        //case 'arcTo':
+        //  break;
+        // move 0x30-0x3f
+        case 'moveTo':
+          d.push('M', args.join(','));
+          break;
+        // draw 0x70-0x7f
+        case 'stroke':
+          path.setAttribute('stroke', this.color);
+          break;
+        case 'fill':
+          path.setAttribute('fill', this.color);
+          break;
+        default:
+          throw new Error('not supported method[' + Fcanvas.ReversePropertyTable[id & 0x7f] + ']');
+      }
+    // property set
+    } else {
+      switch (Fcanvas.ReversePropertyTable[id & 0x7f]) {
+        case 'lineWidth':
+          path.setAttribute('stroke-width', args[0]);
+          break;
+        default:
+          throw new Error('not supported property[' + Fcanvas.ReversePropertyTable[id & 0x7f] + ']');
+      }
+    }
+  }
+
+  path.setAttribute('d', d.join(' '));
+
+  return path;
+};
+
+/**
+ * Canvas の arc メソッドを SVG のパスにして返す.
+ * @param {number} x
+ * @param {number} y
+ * @param {number} radius
+ * @param {number} startAngle
+ * @param {number} endAngle
+ * @param {boolean} clockwise
+ * @param {boolean=} opt_isFirstPath
+ * @return {Array}
+ */
+Fcanvas.prototype.calcCanvasArcToSVGPath = function(x, y, radius, startAngle, endAngle, clockwise, opt_isFirstPath) {
+  /** @type {number} */
+  var deltaAngle = Math.abs(startAngle - endAngle);
+  /** @type {number} */
+  var startX;
+  /** @type {number} */
+  var startY;
+  /** @type {number} */
+  var endX = x + Math.cos(endAngle) * radius;
+  /** @type {number} */
+  var endY = y + Math.sin(endAngle) * radius;
+  /** @type {number} */
+  var rot;
+  /** @type {number} */
+  var sweep;
+  /** @type {number} */
+  var isLong;
+  /** @type {Array} */
+  var result = [];
+
+  // アングルが同じ場合は描画するものがない
+  if (startAngle === endAngle) {
+    return result;
+  }
+
+  // 円の場合は半分ずつ描画する
+  if (deltaAngle >= 2 * Math.PI) {
+    result.push.apply(this, this.calcCanvasArcToSVGPath(x, y, radius, startAngle, startAngle + Math.PI, clockwise));
+    result.push.apply(this, this.calcCanvasArcToSVGPath(x, y, radius, startAngle + Math.PI, startAngle + 2 * Math.PI, clockwise));
+    result.push('M', endX, endY);
+
+    return result;
+  }
+
+  // パスの先頭だった場合はその場所まで移動し、そうでない場合は前のパスからの直線
+  startX = x + Math.cos(startAngle) * radius;
+  startY = y + Math.sin(startAngle) * radius;
+  result.push(opt_isFirstPath ? 'M' : 'L', startX, startY);
+
+  // パスの描画
+  rot = deltaAngle * 180 / Math.PI; // sign, abs?
+  sweep = clockwise ? 0 : 1;
+  isLong = ((rot >= 180) === !!clockwise) ? 0 : 1;
+  result.push('A', radius, radius, rot, isLong, sweep, endX, endY);
+
+  return result;
 };
 
 
