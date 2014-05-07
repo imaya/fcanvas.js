@@ -14,6 +14,14 @@ Fcanvas = function() {
   this.pos = 0;
   /** @type {function(CanvasRenderingContext2D)} */
   this.drawFunction;
+  /** @type {number} */
+  this.minX = 0xffffffff;
+  /** @type {number} */
+  this.minY = 0xffffffff;
+  /** @type {number} */
+  this.maxX = 0;
+  /** @type {number} */
+  this.maxY = 0;
 };
 
 /**
@@ -112,9 +120,70 @@ Fcanvas.ReverseMethodTable = (
           /** @type {number} */
           var pos = this.pos;
           /** @type {number} */
+          var tmp;
+          /** @type {number} */
           var i;
           /** @type {number} */
           var il;
+
+          // bounding rect
+          switch (methodName) {
+            case 'fillRect':
+            case 'strokeRect':
+            case 'clearRect':
+              // w
+              tmp = arguments[0] + arguments[2];
+              if (this.minX > tmp) { this.minX = tmp; }
+              if (this.maxX < tmp) { this.maxX = tmp; }
+              // h
+              tmp = arguments[1] + arguments[3];
+              if (this.minY > tmp) { this.minY = tmp; }
+              if (this.maxY < tmp) { this.maxY = tmp; }
+              /* FALLTHROUGH */
+            case 'moveTo':
+            case 'lineTo':
+              // x
+              if (this.minX > arguments[0]) { this.minX = arguments[0]; }
+              if (this.maxX < arguments[0]) { this.maxX = arguments[0]; }
+              // y
+              if (this.minY > arguments[1]) { this.minY = arguments[1]; }
+              if (this.maxY < arguments[1]) { this.maxY = arguments[1]; }
+              break;
+            case 'bezierCurveTo':
+              // cp1x
+              if (this.minY > arguments[0]) { this.minY = arguments[0]; }
+              if (this.maxY < arguments[0]) { this.maxY = arguments[0]; }
+              // cp1y
+              if (this.minX > arguments[1]) { this.minX = arguments[1]; }
+              if (this.maxX < arguments[1]) { this.maxX = arguments[1]; }
+              // cp2x
+              if (this.minY > arguments[2]) { this.minY = arguments[2]; }
+              if (this.maxY < arguments[2]) { this.maxY = arguments[2]; }
+              // cp2y
+              if (this.minX > arguments[3]) { this.minX = arguments[3]; }
+              if (this.maxX < arguments[3]) { this.maxX = arguments[3]; }
+              // x
+              if (this.minY > arguments[4]) { this.minY = arguments[4]; }
+              if (this.maxY < arguments[4]) { this.maxY = arguments[4]; }
+              // y
+              if (this.minX > arguments[5]) { this.minX = arguments[5]; }
+              if (this.maxX < arguments[5]) { this.maxX = arguments[5]; }
+              break;
+            case 'arc':
+              // x
+              tmp = arguments[0] - arguments[2];
+              if (this.minX > tmp) { this.minX = tmp; }
+              tmp = arguments[0] + arguments[2];
+              if (this.maxX < tmp) { this.maxX = tmp; }
+              // y
+              tmp = arguments[1] - arguments[2];
+              if (this.minY > tmp) { this.minY = tmp; }
+              tmp = arguments[1] + arguments[2];
+              if (this.maxY < tmp) { this.maxY = tmp; }
+              break;
+            case 'arcTo':
+              throw new Error('not implemented');
+          }
 
           // type
           this.sequence[pos++] = methodId;
@@ -267,6 +336,22 @@ Fcanvas.prototype.createDrawFunction = function() {
   this.drawFunction = new Function("ctx", funcstr);
 
   return this.drawFunction;
+};
+
+Fcanvas.prototype.getBoundingRect = function() {
+  return (this.minX === 0xffffffff || this.minY === 0xffffffff) ?
+  {
+    left: 0,
+    top: 0,
+    width: 0,
+    height: 0
+  } :
+  {
+    left: this.minX,
+    top: this.minY,
+    width: this.maxX - this.minX,
+    height: this.maxY - this.minY
+  };
 };
 
 
