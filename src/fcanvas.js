@@ -1,4 +1,4 @@
-goog.provide('Fcanvas');
+goog.provide('imaya.Fcanvas');
 
 goog.scope(function() {
 
@@ -7,7 +7,7 @@ goog.scope(function() {
  * // 継承していないが、CanvasRenderingContext2D のメソッドを受けるために偽装する
  * @extends {CanvasRenderingContext2D}
  */
-Fcanvas = function() {
+imaya.Fcanvas = function() {
   /** @type {Array.<number>} */
   this.sequence = [];
   /** @type {number} */
@@ -28,7 +28,7 @@ Fcanvas = function() {
  * メソッドテーブル
  * @type {!Object.<string, number>}
  */
-Fcanvas.MethodTable = { // 0x00-0x7f
+imaya.Fcanvas.MethodTable = { // 0x00-0x7f
   // state 0x00-0x0f
   save: 0x00,
   restore: 0x01,
@@ -58,7 +58,7 @@ Fcanvas.MethodTable = { // 0x00-0x7f
  * プロパティテーブル
  * @type {!Object.<string, number>}
  */
-Fcanvas.PropertyTable = { // 0x80-0xff
+imaya.Fcanvas.PropertyTable = { // 0x80-0xff
   // line 0x80-0x8f
   lineWidth: 0x80,
   lineCap: 0x81,
@@ -89,7 +89,7 @@ Fcanvas.PropertyTable = { // 0x80-0xff
  * 中間形式のidからメソッド名への変換テーブル.
  * @type {Array.<string>}
  */
-Fcanvas.ReverseMethodTable = (
+imaya.Fcanvas.ReverseMethodTable = (
   /**
    * メソッドテーブルから prototype にメソッド追加.
    * @param {!Object.<string, number>} table
@@ -115,7 +115,7 @@ Fcanvas.ReverseMethodTable = (
       value = table[key];
       reverseTable[value] = key;
 
-      Fcanvas.prototype[key] = (function(methodName, methodId) {
+      imaya.Fcanvas.prototype[key] = (function(methodName, methodId) {
         return function() {
           /** @type {number} */
           var pos = this.pos;
@@ -201,13 +201,13 @@ Fcanvas.ReverseMethodTable = (
 
     return reverseTable;
   }
-)(Fcanvas.MethodTable);
+)(imaya.Fcanvas.MethodTable);
 
 /**
  * 中間形式のidからプロパティ名への変換テーブル.
  * @type {Array.<string>}
  */
-Fcanvas.ReversePropertyTable = (
+imaya.Fcanvas.ReversePropertyTable = (
   /**
    * プロパティテーブルからプロパティ名の setter/getter を登録.
    * @param {!Object.<string, number>} table
@@ -233,7 +233,7 @@ Fcanvas.ReversePropertyTable = (
       value = table[key] & 0x7f;
       reverseTable[value] = key;
 
-      Object.defineProperty(Fcanvas.prototype, key, {
+      Object.defineProperty(imaya.Fcanvas.prototype, key, {
         set: (function(propertyName, methodId) {
           return function(value) {
             // type
@@ -257,12 +257,12 @@ Fcanvas.ReversePropertyTable = (
 
     return reverseTable;
   }
-)(Fcanvas.PropertyTable);
+)(imaya.Fcanvas.PropertyTable);
 
 /**
  * @param {CanvasRenderingContext2D} ctx target context
  */
-Fcanvas.prototype.draw = function(ctx) {
+imaya.Fcanvas.prototype.draw = function(ctx) {
   /** @type {Array.<number>} */
   var sequence = this.sequence;
   /** @type {number} */
@@ -285,11 +285,11 @@ Fcanvas.prototype.draw = function(ctx) {
 
     // method call
     if (id < 0x80) {
-      name = Fcanvas.ReverseMethodTable[id];
+      name = imaya.Fcanvas.ReverseMethodTable[id];
       ctx[name].apply(ctx, args);
       // property set
     } else {
-      name = Fcanvas.ReversePropertyTable[id & 0x7f];
+      name = imaya.Fcanvas.ReversePropertyTable[id & 0x7f];
       ctx[name] = args[0];
     }
   }
@@ -299,7 +299,7 @@ Fcanvas.prototype.draw = function(ctx) {
  * 描画 function の生成.
  * @return {function(CanvasRenderingContext2D)}
  */
-Fcanvas.prototype.createDrawFunction = function() {
+imaya.Fcanvas.prototype.createDrawFunction = function() {
   /** @type {Array.<string>} */
   var funcstr = "";
   /** @type {Array.<number>} */
@@ -324,11 +324,11 @@ Fcanvas.prototype.createDrawFunction = function() {
 
     // method call
     if (id < 0x80) {
-      name = Fcanvas.ReverseMethodTable[id];
+      name = imaya.Fcanvas.ReverseMethodTable[id];
       funcstr += "ctx." + name + "(" + args.join(",") + ");";
       // property set
     } else {
-      name = Fcanvas.ReversePropertyTable[id & 0x7f];
+      name = imaya.Fcanvas.ReversePropertyTable[id & 0x7f];
       funcstr += "ctx." + name + "=" + args[0] + ";";
     }
   }
@@ -338,7 +338,7 @@ Fcanvas.prototype.createDrawFunction = function() {
   return this.drawFunction;
 };
 
-Fcanvas.prototype.getBoundingRect = function() {
+imaya.Fcanvas.prototype.getBoundingRect = function() {
   return (this.minX === 0xffffffff || this.minY === 0xffffffff) ?
   {
     left: 0,
