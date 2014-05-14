@@ -354,6 +354,10 @@ imaya.Fcanvas.prototype.getBoundingRect = function() {
   };
 };
 
+imaya.Fcanvas.prototype.clearContext = function() {
+  imaya.Fcanvas.call(this);
+};
+
 
 // end of scope
 });
