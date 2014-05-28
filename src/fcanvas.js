@@ -358,6 +358,32 @@ imaya.Fcanvas.prototype.clearContext = function() {
   imaya.Fcanvas.call(this);
 };
 
+/**
+ * @param {...imaya.Fcanvas} var_args
+ */
+imaya.Fcanvas.prototype.push = function(var_args) {
+  /** @type {imaya.Fcanvas} */
+  var fcanvas;
+  /** @type {number} */
+  var i;
+  /** @type {number} */
+  var il;
+
+  for (i = 0, il = arguments.length; i < il; ++i) {
+    fcanvas = arguments[i];
+
+    if (this.minX > fcanvas.minX) { this.minX = fcanvas.minX; }
+    if (this.maxX < fcanvas.maxX) { this.maxX = fcanvas.maxX; }
+    if (this.minY > fcanvas.minY) { this.minY = fcanvas.minY; }
+    if (this.maxY < fcanvas.maxY) { this.maxY = fcanvas.maxY; }
+
+    this.sequence = this.sequence.concat(fcanvas.sequence);
+    this.pos += fcanvas.pos;
+  }
+
+  return this;
+};
+
 
 // end of scope
 });
